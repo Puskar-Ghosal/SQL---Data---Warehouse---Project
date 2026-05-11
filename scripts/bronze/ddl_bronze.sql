@@ -1,204 +1,229 @@
 /*
 ===============================================================================
- Stored Procedure : bronze.load_bronze
+ Bronze Layer Table Creation Script
 ===============================================================================
 
 PURPOSE:
 --------
-This stored procedure is used to load raw data files (CSV files) into the 
-Bronze Layer tables of the Data Warehouse.
+This script creates all required tables for the Bronze Layer in the
+Data Warehouse project.
 
-The Bronze Layer acts as the first storage layer where raw source data is 
-ingested exactly as received from CRM and ERP systems.
+The Bronze Layer stores raw data exactly as received from source systems
+before any transformation or cleaning.
 
-WHAT THIS PROCEDURE DOES:
+SOURCE SYSTEMS:
+---------------
+1. CRM System
+2. ERP System
+
+WHAT THIS SCRIPT DOES:
+----------------------
+1. Checks whether a table already exists.
+2. Drops the existing table if found.
+3. Creates a fresh new table structure.
+4. Defines columns and data types for raw data storage.
+
+WHY WE USE "IF OBJECT_ID ... DROP TABLE":
+-----------------------------------------
+Before creating a table, we first check if it already exists.
+
+If the table already exists:
+- SQL Server will throw an error during CREATE TABLE.
+- Old table structure may conflict with the new structure.
+
+So we:
+1. Check existence using OBJECT_ID()
+2. Drop the old table
+3. Recreate a clean table
+
+SYNTAX USED:
+------------
+IF OBJECT_ID('table_name', 'U') IS NOT NULL
+	DROP TABLE table_name;
+
+'U' means:
+-----------
+User-defined table
+
+===============================================================================
+CRM TABLES
+===============================================================================
+
+1. bronze.crm_cust_info
+-----------------------
+Stores customer information from CRM system.
+
+Columns:
+- cst_id             : Customer ID
+- cst_key            : Customer key
+- cst_firstname      : First name
+- cst_lastname       : Last name
+- cst_marital_status : Marital status
+- cst_gndr           : Gender
+- cst_create_date    : Customer creation date
+
+-------------------------------------------------------------------------------
+
+2. bronze.crm_prd_info
+----------------------
+Stores product information from CRM system.
+
+Columns:
+- prd_id         : Product ID
+- prd_key        : Product key
+- prd_nm         : Product name
+- prd_cost       : Product cost
+- prd_line       : Product category/line
+- prd_start_dt   : Product start date
+- prd_end_dt     : Product end date
+
+-------------------------------------------------------------------------------
+
+3. bronze.crm_sales_details
+---------------------------
+Stores sales transaction details.
+
+Columns:
+- sls_ord_num    : Order number
+- sls_prd_key    : Product key
+- sls_cust_id    : Customer ID
+- sls_order_dt   : Order date
+- sls_ship_dt    : Shipping date
+- sls_due_dt     : Due date
+- sls_sales      : Total sales amount
+- sls_quantity   : Quantity sold
+- sls_price      : Product price
+
+===============================================================================
+ERP TABLES
+===============================================================================
+
+4. bronze.erp_loc_a101
+----------------------
+Stores customer country/location data.
+
+Columns:
+- cid     : Customer ID
+- cntry   : Country
+
+-------------------------------------------------------------------------------
+
+5. bronze.erp_cust_az12
+-----------------------
+Stores additional ERP customer information.
+
+Columns:
+- cid     : Customer ID
+- bdate   : Birth date
+- gen     : Gender
+
+-------------------------------------------------------------------------------
+
+6. bronze.erp_px_cat_g1v2
 -------------------------
-1. Truncates (clears) existing data from bronze tables.
-2. Loads fresh data from CSV files using BULK INSERT.
-3. Separately loads CRM and ERP source data.
-4. Tracks loading duration for each table.
-5. Displays execution logs using PRINT statements.
-6. Handles errors using TRY...CATCH block.
+Stores product category information.
 
-TABLES LOADED:
---------------
-CRM Tables:
-- bronze.crm_cust_info
-- bronze.crm_prd_info
-- bronze.crm_sales_details
+Columns:
+- id           : Product ID
+- cat          : Category
+- subcat       : Sub-category
+- maintenance  : Maintenance type
 
-ERP Tables:
-- bronze.erp_cust_az12
-- bronze.erp_loc_a101
-- bronze.erp_px_cat_g1v2
+===============================================================================
+WHY THIS SCRIPT IS IMPORTANT:
+-----------------------------
+This script builds the foundation of the Data Warehouse.
 
-IMPORTANT CONCEPTS USED:
-------------------------
-- CREATE OR ALTER PROCEDURE :
-    Creates the procedure if it does not exist,
-    otherwise updates the existing one.
+Without tables:
+- Data cannot be loaded
+- ETL process cannot start
+- Bronze layer cannot store raw files
 
-- TRUNCATE TABLE :
-    Removes all existing records quickly before loading fresh data.
+This is usually the FIRST step in a Data Warehouse project.
 
-- BULK INSERT :
-    Imports large CSV files into SQL Server tables efficiently.
-
-- TRY...CATCH :
-    Handles runtime errors and displays error information.
-
-- GETDATE() + DATEDIFF() :
-    Used for measuring data load execution time.
-
-WHY THIS PROCEDURE IS IMPORTANT:
---------------------------------
-Instead of manually loading files one by one,
-this procedure automates the entire Bronze Layer ingestion process.
-
-BENEFITS:
+===============================================================================
+WORKFLOW:
 ---------
-- Faster data loading
-- Reusable ETL process
-- Better monitoring using logs
-- Easier debugging with error handling
-- Supports Data Warehouse automation
-
-EXECUTION:
-----------
-Run the procedure using:
-
-EXEC bronze.load_bronze
+Step 1 → Create Database
+Step 2 → Create Schemas
+Step 3 → Create Bronze Tables   ← (THIS SCRIPT)
+Step 4 → Load Raw CSV Data
+Step 5 → Transform Data
+Step 6 → Build Silver Layer 
+Step 7 → Build Gold Layer 
+Step 8 → Exploratory Data Analysis ( EDA ) 
 
 ===============================================================================
 */
-CREATE OR ALTER PROCEDURE bronze.load_bronze AS
-BEGIN
-	DECLARE @starttime DATETIME , @endtime DATETIME , @batch_start_time DATETIME , @batch_end_time DATETIME
-	BEGIN TRY
-		SET @batch_start_time = GETDATE()
-		PRINT '====================================='
-		PRINT 'Loading Bronze Layer'
-		PRINT '====================================='
 
-		PRINT '-------------------------------------'
-		PRINT 'Loading CRM Table' 
-		PRINT '-------------------------------------'
+USE DataWareHouse
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : bronze.crm_cust_info'
-		TRUNCATE TABLE bronze.crm_cust_info
+IF OBJECT_ID('bronze.crm_cust_info', 'U') IS NOT NULL 
+	DROP TABLE bronze.crm_cust_info;
 
-		PRINT 'Data Inserted to : bronze.crm_cust_info'
-		BULK INSERT bronze.crm_cust_info
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		);
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		PRINT'-----------------'
+CREATE TABLE bronze.crm_cust_info (
+	cst_id INT , 
+	cst_key NVARCHAR(50),
+	cst_firstname NVARCHAR(50),
+	cst_lastname NVARCHAR(50),
+	cst_marital_status NVARCHAR(50),
+	cst_gndr NVARCHAR(50),
+	cst_create_date DATE
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : bronze.crm_prd_info'
-		TRUNCATE TABLE bronze.crm_prd_info
+) ;
 
-		PRINT 'Data Inserted to : bronze.crm_prd_info'
-		BULK INSERT bronze.crm_prd_info
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		);
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		PRINT'-----------------'
+IF OBJECT_ID('bronze.crm_prd_info', 'U') IS NOT NULL 
+	DROP TABLE bronze.crm_prd_info;
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : crm_sales_details'
-		TRUNCATE TABLE bronze.crm_sales_details
+CREATE TABLE bronze.crm_prd_info (
+prd_id INT ,
+prd_key NVARCHAR(50),
+prd_nm NVARCHAR(50),
+prd_cost INT,
+prd_line NVARCHAR(50),
+prd_start_dt DATETIME,
+prd_end_dt DATETIME
+);
 
-		PRINT 'Data Inserted to : crm_sales_details'
-		BULK INSERT bronze.crm_sales_details
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		);
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		
+IF OBJECT_ID('bronze.crm_sales_details ', 'U') IS NOT NULL 
+	DROP TABLE bronze.crm_sales_details ;
 
-		PRINT '-------------------------------------'
-		PRINT 'Loading ERP Table' 
-		PRINT '-------------------------------------'
+CREATE TABLE bronze.crm_sales_details (
+sls_ord_num NVARCHAR(50) , 
+sls_prd_key NVARCHAR(50),
+sls_cust_id INT,
+sls_order_dt INT,
+sls_ship_dt INT,
+sls_due_dt INT,
+sls_sales INT,
+sls_quantity INT ,
+sls_price INT 
+) ; 
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : bronze.erp_cust_az12'
-		TRUNCATE TABLE bronze.erp_cust_az12
+IF OBJECT_ID('bronze.erp_loc_a101 ', 'U') IS NOT NULL 
+	DROP TABLE bronze.erp_loc_a101 ;
 
-		PRINT 'Data Inserted to : bronze.erp_cust_az12'
-		BULK INSERT bronze.erp_cust_az12
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_erp\cust_az12.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		);
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		PRINT'-----------------'
+CREATE TABLE bronze.erp_loc_a101 (
+cid NVARCHAR(50) , 
+cntry NVARCHAR(50)
+);
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : bronze.erp_loc_a101'
-		TRUNCATE TABLE bronze.erp_loc_a101
+IF OBJECT_ID('bronze.erp_cust_az12', 'U') IS NOT NULL 
+	DROP TABLE bronze.erp_cust_az12 ;
 
-		PRINT 'Data Inserted to : bronze.erp_loc_a101'
-		BULK INSERT bronze.erp_loc_a101
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_erp\loc_a101.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		);
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		PRINT'-----------------'
+CREATE TABLE bronze.erp_cust_az12 ( 
+cid NVARCHAR(50),
+bdate DATE ,
+gen NVARCHAR(50)
+);
 
-		SET @starttime = GETDATE();
-		PRINT 'Truncating Table : bronze.erp_px_cat_g1v2'
-		TRUNCATE TABLE bronze.erp_px_cat_g1v2
+IF OBJECT_ID('bronze.erp_px_cat_g1v2', 'U') IS NOT NULL 
+	DROP TABLE bronze.erp_px_cat_g1v2 ;
 
-		PRINT 'Data Inserted to : bronze.erp_px_cat_g1v2'
-		BULK INSERT bronze.erp_px_cat_g1v2
-		FROM 'C:\Users\PUSKAR\Desktop\sql-data-warehouse-project\datasets\source_erp\px_cat_g1v2.csv'
-		WITH (
-			FIRSTROW = 2, 
-			FIELDTERMINATOR = ',',
-			TABLOCK 
-		)
-		SET @endtime = GETDATE();
-		PRINT 'Load Duration : ' + CAST(DATEDIFF(second , @starttime , @endtime) AS NVARCHAR ) + 'seconds'
-		PRINT'-----------------'
+CREATE TABLE bronze.erp_px_cat_g1v2 ( 
+id NVARCHAR(50) , 
+cat NVARCHAR(50),
+subcat NVARCHAR(50) , 
+maintenance NVARCHAR(50)
+);
 
-		SET @batch_end_time = GETDATE() ;
-		PRINT '================================='
-		PRINT 'Loading Bronze Layer is Completed'
-		PRINT ' Total Duration ' + CAST(DATEDIFF(SECOND , @batch_start_time , @batch_end_time) AS NVARCHAR )
-		PRINT '================================='
-
-	END TRY 
-	BEGIN CATCH
-		PRINT '================================='
-		PRINT ' ERROR OCCURED DURING LOADING BRONZE LAYER'
-		PRINT ' Error Message' + ERROR_MESSAGE();
-		PRINT 'Error Message' + CAST(ERROR_NUMBER() AS NVARCHAR);
-		PRINT 'Error Message' + CAST(ERROR_STATE() AS NVARCHAR);
-		PRINT '================================='
-	END CATCH 
-END 
-
-EXEC bronze.load_bronze
