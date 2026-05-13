@@ -236,6 +236,7 @@ This project helps in:
 - SQL Transformations
 - Surrogate Keys
 - Views in SQL Server
+- Stored Procedure
 
 ---
 
