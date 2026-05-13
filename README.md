@@ -43,7 +43,7 @@ This project follows the **3-Layer Medallion Architecture**.
 ```
 
 ---
-![Data Architecture](data architecture.png)
+![Data Architecture](daata architecture.png)
 
 # 🥉 Bronze Layer
 
