@@ -189,6 +189,8 @@ sql-data-warehouse-project/
 │
 ├── docs/
 │   └── data_architecture.drawio
+|   └── data_flow.drawio
+|   └── data integration.drawio
 │
 └── README.md
 ```
