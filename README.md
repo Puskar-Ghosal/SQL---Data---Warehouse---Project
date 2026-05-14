@@ -43,6 +43,8 @@ This project follows the **3-Layer Medallion Architecture**.
 ```
 
 ---
+<img width="565" height="391" alt="daata architecture" src="https://github.com/user-attachments/assets/ce94847f-a02f-4ff0-924f-617ff0a8122b" />
+
 
 # 🥉 Bronze Layer
 
@@ -162,6 +164,7 @@ Contains product details.
 ```
 
 ---
+<img width="555" height="371" alt="data model" src="https://github.com/user-attachments/assets/66de75ad-351d-4316-a1f6-b8536de5de7c" />
 
 # ⚙️ Technologies Used
 
@@ -265,6 +268,8 @@ Dashboard / Reporting
 ```
 
 ---
+<img width="592" height="350" alt="data flow" src="https://github.com/user-attachments/assets/285ab51e-7d67-4485-b58a-4976ef1a9c7c" />
+
 
 # 🏁 Conclusion
 
