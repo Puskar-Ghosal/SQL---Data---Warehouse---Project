@@ -240,19 +240,18 @@ This project helps in:
 - Surrogate Keys
 - Views in SQL Server
 - Stored Procedure
-
 ---
 
 # 📌 Project Status
 
-✅ Data Warehouse Built
-✅ Bronze Layer Completed
-✅ Silver Layer Completed
-✅ Gold Layer Completed
-🚧 SQL Analytics In Progress
-🚧 Customer Report In Progress
-🚧 Product Report In Progress
-🚧 Power BI Dashboard In Progress
+✅ Data Warehouse Built  
+✅ Bronze Layer Completed  
+✅ Silver Layer Completed  
+✅ Gold Layer Completed  
+🚧 SQL Analytics In Progress  
+🚧 Customer Report In Progress  
+🚧 Product Report In Progress  
+🚧 Power BI Dashboard In Progress  
 
 ---
 
